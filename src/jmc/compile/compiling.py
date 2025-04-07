@@ -281,7 +281,7 @@ def build(
     if datapack.version >= 48:
         function_folder = "function"
     else:
-        function_folder = "functions"
+        function_folder = "function"
 
     logger.debug(f"Building (_is_virtual={_is_virtual})")
     datapack.build()
