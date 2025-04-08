@@ -53,11 +53,17 @@ class ItemMixin(JMCFunction):
         item_type = self.args[item_type_param]
         if item_type.startswith("minecraft:"):
             item_type = item_type[10:]
+
+        lore_json = []
         if self.args[lore_param]:
             lores, _ = self.datapack.parse_list(
                 self.raw_args[lore_param].token, self.tokenizer, TokenType.STRING)
-        else:
-            lores = []
+            for lore in lores:
+                # Format each lore entry as a JSON object
+                lore_text = FormattedText(lore, self.raw_args[lore_param].token, self.tokenizer, 
+                                   self.datapack, is_default_no_italic=True, is_allow_score_selector=False)
+                lore_json.append(str(lore_text))
+
         nbt = self.tokenizer.parse_js_obj(
             self.raw_args[nbt_param].token) if self.args[nbt_param] else {}
 
@@ -70,36 +76,36 @@ class ItemMixin(JMCFunction):
 
             nbt[key] = value_token
 
-        lore_ = ",".join([repr(str(FormattedText(lore, self.raw_args[lore_param].token, self.tokenizer, self.datapack, is_default_no_italic=True, is_allow_score_selector=False)))
-                         for lore in lores])
+        bracket_components = []
 
         if self.args[display_name_param]:
-            if "display" in nbt:
-                raise JMCValueError(
-                    "display is already inside the nbt",
-                    self.token,
-                    self.tokenizer)
-            new_token_string = "{"
-            name_ = self.format_text(
+            name_text = self.format_text(
                 display_name_param,
                 is_default_no_italic=True,
                 is_allow_score_selector=False)
-            if name_:
-                new_token_string += f"""Name:{repr(name_)}"""
-            if lore_:
-                if name_:
-                    new_token_string += ","
-                new_token_string += f"""Lore:[{lore_}]"""
-            new_token_string += "}"
-            if name_ or lore_:
-                nbt["display"] = Token.empty(new_token_string)
+            if name_text:
+                bracket_components.append(f'custom_name={name_text}')
+
+        if lore_json:
+            lore_str = ",".join(lore_json)
+            bracket_components.append(f'lore=[{lore_str}]')
+
+        bracket_notation = ""
+        if bracket_components:
+            bracket_notation = f"[{','.join(bracket_components)}]"
+
+            final_nbt = {}
+        if nbt:
+            for key, value in nbt.items():
+                # Skip custom_name and lore as they're handled separately
+                if key not in ["custom_name", "lore"]:
+                    final_nbt[key] = value
 
         return Item(
-            item_type,
-            self.datapack.token_dict_to_raw_js_object(nbt, self.tokenizer),
-            nbt
+            f"{item_type}{bracket_notation}",
+            self.datapack.token_dict_to_raw_js_object(final_nbt, self.tokenizer),
+            final_nbt
         )
-
 
 class EventMixin(JMCFunction):
     def add_event(self, criteria: str, command: str) -> None:
