@@ -94,12 +94,17 @@ class ItemMixin(JMCFunction):
         if bracket_components:
             bracket_notation = f"[{','.join(bracket_components)}]"
 
-            final_nbt = {}
+        final_nbt = {}
         if nbt:
+            custom_data_nbt = {}
             for key, value in nbt.items():
                 # Skip custom_name and lore as they're handled separately
                 if key not in ["custom_name", "lore"]:
-                    final_nbt[key] = value
+                    custom_data_nbt[key] = value
+            
+            # Add all custom NBT data under the custom_data tag
+            if custom_data_nbt :
+                final_nbt["custom_data"] = custom_data_nbt
 
         return Item(
             f"{item_type}{bracket_notation}",
@@ -124,7 +129,7 @@ class EventMixin(JMCFunction):
         :param criteria: Minecraft criteria
         :param commands: Commands to run
         """
-        criteria = criteria.replace("minecraft.", "")
+        # criteria = criteria.replace("minecraft.", "")
         count = criteria.lower().replace(":", "_")
         if self.is_never_used("on_event", parameters=[criteria]):
             objective = f"on_event_{hash_string_to_string(criteria, 7)}"
